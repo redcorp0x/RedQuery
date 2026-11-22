@@ -1,0 +1,217 @@
+.TH REDQUERY 1 "November 2026" "RedQuery" "User Commands"
+.SH NAME
+redquery \- automated Boolean-based SQL injection testing and extraction tool
+.SH SYNOPSIS
+.B redquery
+.RI [ OPTIONS ]
+.SH DESCRIPTION
+.B RedQuery
+is a Python-based tool for automating Boolean-based SQL injection testing and data extraction.
+
+It supports GET and POST requests, AND and OR Boolean conditions, string and integer injection contexts, configurable request timeouts, output saving, and extraction resumption.
+
+RedQuery uses a modular architecture in which different modules handle argument parsing, execution orchestration, payload generation, request dispatching, response verification, extraction, and resume operations.
+
+The tool is intended for authorized security testing and controlled laboratory environments.
+.SH FEATURES
+.IP \(bu 2
+Boolean-based SQL injection testing and extraction.
+.IP \(bu 2
+GET and POST request support.
+.IP \(bu 2
+AND and OR Boolean conditions.
+.IP \(bu 2
+String and integer injection contexts.
+.IP \(bu 2
+Configurable request timeout.
+.IP \(bu 2
+Custom output filename.
+.IP \(bu 2
+Resume interrupted extraction.
+.IP \(bu 2
+Verbose execution mode.
+.IP \(bu 2
+Optional SSL certificate verification bypass.
+.SH OPTIONS
+.TP
+.BR \-u ", " \-\-url " " URL
+Specifies the target URL.
+.TP
+.BR \-m ", " \-\-fail_message " " MESSAGE
+Specifies the response message used as the failure indicator during response verification.
+.TP
+.BR \-\-method " " METHOD
+Specifies the HTTP request method.
+.br
+Supported methods: GET and POST.
+.br
+The default method is POST.
+.TP
+.BR \-\-data " " DATA
+Specifies the POST request data.
+.br
+Example: "username=test&password=test".
+.TP
+.BR \-\-param " " PARAMETER
+Specifies the parameter to be tested.
+.TP
+.BR \-\-condition " " CONDITION
+Specifies the Boolean condition used during injection.
+.br
+Supported values: AND and OR.
+.br
+The default condition is OR.
+.TP
+.BR \-\-context " " CONTEXT
+Specifies the injection context.
+.br
+Supported values: string and int.
+.br
+The default context is string.
+.TP
+.BR \-\-valid " " VALUE
+Specifies the valid value used by the injection logic.
+.TP
+.BR \-\-timeout " " SECONDS
+Specifies the maximum time, in seconds, to wait for an HTTP response.
+.br
+The default timeout is 4 seconds.
+.br
+Increase this value when testing environments respond slowly.
+.TP
+.BR \-o " [" FILENAME ]
+Enables saving extraction results.
+.br
+If a filename is supplied, it is used as the output filename.
+.br
+If no filename is supplied, the default filename is Redquery.txt.
+.TP
+.BR \-\-resume
+Enables resume execution using previously saved extraction progress.
+.TP
+.BR \-\-enum " " STAGE
+Specifies the enumeration stage to continue from when resume mode is enabled.
+.TP
+.BR \-v
+Enables verbose mode and displays additional execution information.
+.TP
+.BR \-k
+Disables SSL certificate verification.
+.SH EXECUTION
+RedQuery begins by parsing the supplied command-line arguments and determining whether normal or resume execution should be performed.
+
+During normal execution, the application performs the required counting operations before starting extraction.
+
+The extraction engine generates payloads and passes them to the verification module. The verification module communicates with the request module, which dispatches the appropriate GET or POST request.
+
+The returned response is evaluated to determine whether the current Boolean condition is satisfied. This process repeats until the requested value has been reconstructed.
+
+After extraction, the user can select a result to continue with another enumeration stage.
+
+.SH RESUME FUNCTIONALITY
+RedQuery supports resuming an interrupted extraction process.
+
+The application stores extraction state in a JSON file named:
+.PP
+.B redquery.restore
+.PP
+When resume mode is enabled, RedQuery loads the saved data, restores the relevant extraction state, and continues the process.
+
+The
+.B --resume
+option enables this functionality, while
+.B --enum
+specifies the enumeration stage to continue from.
+
+Supported resume stages should match the stages implemented by the installed version of RedQuery.
+
+.SH OUTPUT
+When output saving is enabled with
+.BR \-o ,
+RedQuery writes extraction results to the specified file.
+
+If no filename is provided, the default output filename is:
+.PP
+.B Redquery.txt
+.PP
+The restore file
+.B redquery.restore
+is used separately to preserve extraction progress for resume operations.
+
+.SH EXAMPLES
+.TP
+.B POST request using AND condition and string context:
+.nf
+redquery --url http://kitty.thm -m "Invalid username or password" \\
+-o KittyOutput --timeout 5 --data "username=sds&password=sd" \\
+--param username --condition AND --valid kitty
+.fi
+.TP
+.B POST request using AND condition and integer context:
+.nf
+redquery --url http://kitty.thm -m "Invalid username or password" \\
+--context int -o --timeout 5 --data "username=sds&password=sd" \\
+--param username --condition AND --valid kitty
+.fi
+.TP
+.B POST request using default OR condition and integer context:
+.nf
+redquery --url http://kitty.thm -m "Invalid username or password" \\
+--context int -o KittyOutput --timeout 5 \\
+--data "username=sds&password=sd" --param username -v
+.fi
+.TP
+.B POST request with resume enabled:
+.nf
+redquery -u http://kitty.thm --fail_message "Invalid username or password" \\
+-o Myoutputhere --data "username=sds&password=sd" \\
+--param username --condition AND --valid kitty \\
+--resume --enum table -k
+.fi
+.TP
+.B GET request using default OR condition and integer context:
+.nf
+redquery --url http://kitty.thm?id= -m "Invalid username or password" \\
+--method GET --context int -o --timeout 10 -v -k
+.fi
+.TP
+.B GET request with resume enabled:
+.nf
+redquery -u http://kitty.thm?product_id= -m "Invalid product id" \\
+--method GET -o Redqueryhere --resume --enum column \\
+--valid 2 --condition AND
+.fi
+.SH ARCHITECTURE
+RedQuery follows a modular architecture.
+
+The main execution process is coordinated by the main, sub-main, checker, counter, and engine modules. Payload generation, request dispatching, and response verification are handled by dedicated modules.
+
+The resume module restores previously saved extraction state before continuing the normal extraction workflow.
+
+The config module provides shared configuration and extraction state to the modules that require it.
+
+For detailed architecture diagrams and module interactions, refer to the architecture directory in the project repository.
+.SH EXIT STATUS
+An exit status of 0 indicates successful execution.
+.br
+A non-zero exit status indicates an error or unsuccessful execution.
+.PP
+Actual exit statuses depend on the conditions handled by the installed version.
+.SH FILES
+.TP
+.I redquery.restore
+JSON file containing saved extraction state used by resume functionality.
+.TP
+.I Redquery.txt
+Default output filename when output saving is enabled without a custom filename.
+.SH AUTHOR
+RedQuery contributors.
+.SH LICENSE
+RedQuery is distributed under the MIT License. See the LICENSE file in the project repository.
+.SH SECURITY
+Only use RedQuery against systems you own or have explicit authorization to test.
+.SH BUGS
+Report bugs and feature requests through the project's GitHub repository.
+.SH SEE ALSO
+.BR curl (1),
+.BR python3 (1)

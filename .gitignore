@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+*.restore
+Redquery.txt
+.env
+.venv/
